@@ -1,12 +1,15 @@
 
-
+require('dotenv').config()
 const express = require('express')
 const bodyParser = require('body-parser')
 const morgan = require('morgan')
 const cors = require('cors')
+const Person = require('./models/persons.js')
 
 
-let persons = 
+
+
+/*
     [{
         "name": "Arto Hellas",
         "number": "040-123456",
@@ -27,6 +30,7 @@ let persons =
         "number": "39-23-6423122",
         "id": 4
     }]
+ */   
 const newId = ()=>{
     let id = 0
     do{
@@ -41,35 +45,50 @@ app.use(cors())
 morgan.token('body',a = (req,res)=>{return(JSON.stringify(req.body))})
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 app.use(express.static('build'))
+
 app.get('/api/persons',(req,res) =>{
-    res.json(persons)
+    Person.find({}).then(persons=>{
+        res.json(persons)
+    })
 } )
 
-
-app.delete('/api/persons/:id',(req,res)=>{
-    
-    const id = Number(req.params.id) 
-    persons = persons.filter(person => person.id !== id)
-
-    res.status(204).end()
+app.put('/api/persons/:id',(req,res)=>{
+ const body = req.body
+ const person = {
+     name : body.name,
+     number: body.number
+ }
+Person.findByIdAndUpdate(req.params.id,person,{new:true})
+      .then(updatedPerson =>{
+          res.json(updatedPerson.toJSON())
+      }).catch(error=>next(error))
 })
-const checkName= (name) =>{
-return((persons.find(p=>p.name===name)!==undefined))
-}
+app.delete('/api/persons/:id',(req,res)=>{
+    Person.findByIdAndDelete(req.params.id).then(result=>{
+        res.status(204).end()
+    }).catch(error => next(error))
+    
+    //const id = Number(req.params.id) 
+    //persons = persons.filter(person => person.id !== id)
+
+    //res.status(204).end()
+})
+//const checkName= (name) =>{
+//return((persons.find(p=>p.name===name)!==undefined))
+// to be updated to database use
+//}
 
 app.get('/api/persons/:id',(req,res) =>{
-const id = Number(req.params.id)    
-const person = persons.find(person=> person.id ===id)
-if(person){
-res.json(person)
-}else{
-    res.status(404).end()
-
-}
+Person.findById(req.params.id).then(person =>{
+  res.json(person.toJSON())
+}).catch(error =>next(error))
 })
+
 app.get('/api/info',(req,res)=>{
-    res.send('<p>Phonebook has info for ' + persons.length+' people</p>'
-    +'<p>'+new Date()+' </p>' )
+
+    Person.countDocuments({}).then(p=>{
+    res.send('<p>Phonebook has info for ' + p+' people</p>'
+    +'<p>'+new Date()+' </p>' )}).catch(error =>next(error))
     
 
 })
@@ -86,22 +105,34 @@ app.post('/api/persons',(req,res)=>{
             error: 'name missing'
         })
 
-    }else if(checkName(body.name)){
-        return res.status(400).json({
-            error: 'name already on database'
-        })
+    //}else if(checkName(body.name)){ // to be recreated for database use
+    //    return res.status(400).json({
+     //       error: 'name already on database'
+    //    })
     }else if(body.number===""){
         return res.status(400).json({
             error: 'number missing'
     })
+
+ 
 }
-    const person ={
+Person.find({"name:":body.name})
+.then(result =>{
+    if(result){
+    return res.status(400).json({
+        error: 'name already on database'
+    
+    })}
+})
+    const person = new Person({
         name   : body.name,
         number : body.number,
-        id     : newId()
-    }
-    persons = persons.concat(person)
-    res.json(person)
+    })
+    person.save().then(savedPerson =>{
+        res.json(savedPerson.toJSON())
+    }).catch(error=>next(error))
+   
+   
     
 })
 
