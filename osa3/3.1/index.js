@@ -1,36 +1,14 @@
 
-require('dotenv').config()
+
 const express = require('express')
+const app = express()
+require('dotenv').config()
 const bodyParser = require('body-parser')
 const morgan = require('morgan')
 const cors = require('cors')
-const Person = require('./models/persons.js')
-
-
-
 
 /*
-    [{
-        "name": "Arto Hellas",
-        "number": "040-123456",
-        "id": 1
-    },
-      {
-        "name": "Ada Lovelace",
-        "number": "39-44-5323523",
-        "id": 2
-      },
-      {
-        "name": "Dan Abramov",
-        "number": "12-43-234345",
-        "id": 3
-      },
-      {
-        "name": "Mary Poppendieck",
-        "number": "39-23-6423122",
-        "id": 4
-    }]
- */   
+
 const newId = ()=>{
     let id = 0
     do{
@@ -38,10 +16,15 @@ const newId = ()=>{
     }while(persons.find(p=> p.id === id))
     return id
 }
-const app = express()
+*/
 app.use(bodyParser.json())
 app.use(cors())
-
+const Person = require('./models/persons.js')
+const validationErrorHandler = (error,req,res,next)=>{
+    console.log('err',error)
+    next(error)
+}
+app.use(validationErrorHandler)
 morgan.token('body',a = (req,res)=>{return(JSON.stringify(req.body))})
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 app.use(express.static('build'))
@@ -51,6 +34,7 @@ app.get('/api/persons',(req,res) =>{
         res.json(persons)
     })
 } )
+
 
 app.put('/api/persons/:id',(req,res)=>{
  const body = req.body
@@ -100,23 +84,23 @@ app.post('/api/persons',(req,res)=>{
             error: 'content missing'
         })
 
-    }else if(body.name===''){
-        return res.status(400).json({
-            error: 'name missing'
-        })
+    //}else if(body.name===''){
+    //    return res.status(400).json({
+      //      error: 'name missing'
+      //  })
 
     //}else if(checkName(body.name)){ // to be recreated for database use
     //    return res.status(400).json({
      //       error: 'name already on database'
     //    })
-    }else if(body.number===""){
-        return res.status(400).json({
-            error: 'number missing'
-    })
+    //}else if(body.number===""){
+      //  return res.status(400).json({
+     //       error: 'number missing'
+   // })
 
  
 }
-Person.find({"name:":body.name})
+/*Person.find({"name:":body.name})
 .then(result =>{
     if(result){
     return res.status(400).json({
@@ -124,15 +108,14 @@ Person.find({"name:":body.name})
     
     })}
 })
+*/
     const person = new Person({
         name   : body.name,
         number : body.number,
     })
     person.save().then(savedPerson =>{
         res.json(savedPerson.toJSON())
-    }).catch(error=>next(error))
-   
-   
+    }).catch(error =>next(error))
     
 })
 
