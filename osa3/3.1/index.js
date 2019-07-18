@@ -7,7 +7,18 @@ const bodyParser = require('body-parser')
 const morgan = require('morgan')
 const cors = require('cors')
 
+const errorHandler = (error,reques,response,next)=>{
+    console.log('error handler routine 1')
+    if(error.name==='ValidationError'){
+        return response.status(400).json({error: error.message})
+
+    }else{
+        console.log('else')
+    next(error)
+    }
+}
 /*
+
 
 const newId = ()=>{
     let id = 0
@@ -17,26 +28,25 @@ const newId = ()=>{
     return id
 }
 */
+
 app.use(bodyParser.json())
+
 app.use(cors())
 const Person = require('./models/persons.js')
-const validationErrorHandler = (error,req,res,next)=>{
-    console.log('err',error)
-    next(error)
-}
-app.use(validationErrorHandler)
+
+
 morgan.token('body',a = (req,res)=>{return(JSON.stringify(req.body))})
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 app.use(express.static('build'))
 
-app.get('/api/persons',(req,res) =>{
+app.get('/api/persons',(req,res,next) =>{
     Person.find({}).then(persons=>{
         res.json(persons)
     })
 } )
 
 
-app.put('/api/persons/:id',(req,res)=>{
+app.put('/api/persons/:id',(req,res,next)=>{
  const body = req.body
  const person = {
      name : body.name,
@@ -47,7 +57,7 @@ Person.findByIdAndUpdate(req.params.id,person,{new:true})
           res.json(updatedPerson.toJSON())
       }).catch(error=>next(error))
 })
-app.delete('/api/persons/:id',(req,res)=>{
+app.delete('/api/persons/:id',(req,res,next)=>{
     Person.findByIdAndDelete(req.params.id).then(result=>{
         res.status(204).end()
     }).catch(error => next(error))
@@ -62,7 +72,7 @@ app.delete('/api/persons/:id',(req,res)=>{
 // to be updated to database use
 //}
 
-app.get('/api/persons/:id',(req,res) =>{
+app.get('/api/persons/:id',(req,res,next) =>{
 Person.findById(req.params.id).then(person =>{
   res.json(person.toJSON())
 }).catch(error =>next(error))
@@ -77,9 +87,9 @@ app.get('/api/info',(req,res)=>{
 
 })
 
-app.post('/api/persons',(req,res)=>{
+app.post('/api/persons',(req,res,next)=>{
     const body = req.body
-    if(!body){
+   /* if(!body){
         return res.status(400).json({
             error: 'content missing'
         })
@@ -113,12 +123,15 @@ app.post('/api/persons',(req,res)=>{
         name   : body.name,
         number : body.number,
     })
+    console.log('create try')
     person.save().then(savedPerson =>{
         res.json(savedPerson.toJSON())
-    }).catch(error =>next(error))
+    }).catch(error =>{
+        console.log('errorhandling start..')
+        next(error)})
     
 })
-
+app.use(errorHandler)
 const PORT = process.env.PORT || 3001
 app.listen(PORT, ()=>{
     console.log(`server running on port ${PORT}`)
